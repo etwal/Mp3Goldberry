@@ -12,10 +12,10 @@ import java.util.stream.Collectors;
 public class TimeDelayQueue {
 
     private int delay;
-    private List<PubSubMessage> queue = new ArrayList<>();
 
-    private int total = queue.size();
+    private PriorityQueue<PubSubMessage> queueee = new PriorityQueue<>(new PubSubMessageComparator());
 
+    private int total = queueee.size();
     // a comparator to sort messages
     private class PubSubMessageComparator implements Comparator<PubSubMessage> {
         public int compare(PubSubMessage msg1, PubSubMessage msg2) {
@@ -38,12 +38,12 @@ public class TimeDelayQueue {
     // if a message with the same id exists then
     // return false
     public boolean add(PubSubMessage msg) {
-        for (PubSubMessage m: queue){
+        for (PubSubMessage m: queueee){
             if (msg.getId() == m.getId()){
                 return false;
             }
         }
-        queue.add(msg);
+        queueee.add(msg);
         total++;
 
 
@@ -65,17 +65,14 @@ public class TimeDelayQueue {
     // return the next message and PubSubMessage.NO_MSG
     // if there is ni suitable message
     public PubSubMessage getNext() {
-        queue.sort(new PubSubMessageComparator());
 
-
-
-        for (int i =0; i< queue.size(); i++) {
-            if ( queue.get(i).isTransient() && System.currentTimeMillis() - queue.get(i).getTimestamp().getTime() > ((TransientPubSubMessage)queue.get(i)).getLifetime() ){
-                queue.remove(i);
+        for (int i =0; i< queueee.size(); i++) {
+            if ( queueee.peek().isTransient() && System.currentTimeMillis() - queueee.peek().getTimestamp().getTime() > ((TransientPubSubMessage)queueee.peek()).getLifetime() ){
+                queueee.remove(queueee.peek());
             }
-            if ((System.currentTimeMillis()) - queue.get(i).getTimestamp().getTime() >= delay ) {
-                PubSubMessage temp = queue.get(i);
-                queue.remove(i);
+            if ((System.currentTimeMillis()) - queueee.peek().getTimestamp().getTime() >= delay ) {
+                PubSubMessage temp = queueee.peek();
+                queueee.remove(queueee.peek());
                 return temp;
             }
         }
