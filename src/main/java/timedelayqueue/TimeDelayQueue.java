@@ -2,6 +2,7 @@ package timedelayqueue;
 
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.stream.Collectors;
 
 // TODO: write a description for this class
 // TODO: complete all methods, irrespective of whether there is an explicit TODO or not
@@ -12,6 +13,8 @@ public class TimeDelayQueue {
 
     private int delay;
     private List<PubSubMessage> queue = new ArrayList<>();
+
+    private int total = queue.size();
 
     // a comparator to sort messages
     private class PubSubMessageComparator implements Comparator<PubSubMessage> {
@@ -41,6 +44,7 @@ public class TimeDelayQueue {
             }
         }
         queue.add(msg);
+        total++;
 
 
 
@@ -54,15 +58,27 @@ public class TimeDelayQueue {
      */
     public long getTotalMsgCount() {
 
-        return queue.size();
+        return total;
 
     }
 
     // return the next message and PubSubMessage.NO_MSG
     // if there is ni suitable message
     public PubSubMessage getNext() {
+        queue.sort(new PubSubMessageComparator());
 
-        queue.stream().sorted(PubSubMessageComparator);
+
+
+        for (int i =0; i< queue.size(); i++) {
+            if ( queue.get(i).isTransient() && System.currentTimeMillis() - queue.get(i).getTimestamp().getTime() > ((TransientPubSubMessage)queue.get(i)).getLifetime() ){
+                queue.remove(i);
+            }
+            if ((System.currentTimeMillis()) - queue.get(i).getTimestamp().getTime() >= delay ) {
+                PubSubMessage temp = queue.get(i);
+                queue.remove(i);
+                return temp;
+            }
+        }
 
 
         return PubSubMessage.NO_MSG;
